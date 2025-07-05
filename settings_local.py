@@ -12,7 +12,7 @@ DATABASES = {
     }
 }
 
-SILENCED_SYSTEM_CHECKS = ['captcha.recaptcha_test_key_error', 'models.E025',
+SILENCED_SYSTEM_CHECKS = ['django_recaptcha.recaptcha_test_key_error', 'models.E025',
                           'fields.W903']
 
 ALLOWED_HOSTS = [
