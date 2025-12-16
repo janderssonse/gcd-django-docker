@@ -15,9 +15,17 @@ DATABASES = {
 SILENCED_SYSTEM_CHECKS = ['django_recaptcha.recaptcha_test_key_error', 'models.E025',
                           'fields.W903']
 
+# Disable memcached for local development
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake'
+    }
+}
+
 ALLOWED_HOSTS = [
     'localhost',
-    '0.0.0.0',
+    '127.0.0.1',
     '.comics.org',
     '.comics.org.',  # Allow FQDN and subdomains.  Can be dropped in 1.7
 ]

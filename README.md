@@ -4,26 +4,28 @@ This uses Docker and Docker Compose, which need to be installed first.
 
 After cloning this repo into a directory, and editing the ports if needed, follow these steps:
 
-1. build images - `docker-compose build`
-1. start services, or use -d in detached mode to see the logs - `docker-compose up`
-1. run migrations - `docker-compose run web /usr/local/bin/python gcd-django/manage.py migrate`
+1. install GCD code - `git clone https://github.com/GrandComicsDatabase/gcd-django.git`
+1. optionally change the branch from beta to master, or use your development repo
+1. build images - `docker compose build`
+1. start services, or use -d in detached mode to see the logs - `docker compose up`
+1. run migrations - `docker compose run web /usr/local/bin/python gcd-django/manage.py migrate`
 
 On the first run the mysql-setup needs time, it needs to finish to have the db present before you can run migrate. The migrate also takes quite some minutes.
 
 This will result in a running website without any data.
-Check the names of your containers with `docker-compose images`, one is for the db-server (use that as 'db_container_name') and one is for the website-server (use that as 'web_container_name').
+Check the names of your containers with `docker compose images`, one is for the db-server (use that as 'db_container_name') and one is for the website-server (use that as 'web_container_name').
 
 To import data, login to the GCD and download a (current) dump from https://www.comics.org/download/.
 
 After unzipping the dump, run the following with the name of the 'current_dump':  
 `docker exec -i 'db_container_name' mysql -u gcd-django my-gcd-db -pdb-gcd < 'current_dump'`
 
-To view the website, access http://0.0.0.0:8000/.
+To view the website, access http://127.0.0.1:8000/.
 
 To load users into the system, first run the migrations again:  
- `docker-compose run web /usr/local/bin/python gcd-django/manage.py migrate`
+ `docker compose run web /usr/local/bin/python gcd-django/manage.py migrate`
 (note that we currently don't know why the migration needs to be done again) and then use  
-`docker-compose run web python gcd-django/manage.py loaddata gcd-django/apps/indexer/fixtures/users.yaml`  
+`docker compose run web python gcd-django/manage.py loaddata gcd-django/apps/indexer/fixtures/users.yaml`
 The three development users are (passwords in ()): `admin (admin)`, `editor (editme)`, and `dexter_1234 (test)`.
 
 To get a shell use `docker exec -it 'web_container_name' bash`, e.g. to locally edit files. After changing into `gcd-django` you can get a django shell with `python manage.py shell`.
