@@ -37,56 +37,59 @@ def setup_object_class(model_name):
     anon = User.objects.get(username='anon')
     objects = DISPLAY_CLASSES[model_name].objects.order_by('id')
     print("Setting up: %s" % model_name)
-    for object in objects[:350]:
+    for object in objects[:500]:
         setup_object(object, model_name, anon)
 
 
-def setup_issues():
+def setup_issue(issue):
     anon = User.objects.get(username='anon')
-    objects = Issue.objects.order_by('id')
-    print("Setting up: Issues")
-    for object in objects[:500]:
-        changeset = setup_object(object, 'issue', anon)
-        for credit in object.active_credits:
-            revision = IssueCreditRevision.clone(
-              credit, changeset,
-              issue_revision=changeset.issuerevisions.get(),
-              fork=True)
+    changeset = setup_object(issue, 'issue', anon)
+    for credit in issue.active_credits:
+        revision = IssueCreditRevision.clone(
+            credit, changeset,
+            issue_revision=changeset.issuerevisions.get(),
+            fork=True)
+        revision.source = credit
+        revision.created = credit.modified
+        revision.save()
+    for story in issue.active_stories():
+        story_revision = StoryRevision.clone(story, changeset, fork=True)
+        story_revision.source = story
+        story_revision.created = story.modified
+        story_revision.save()
+        for credit in story.active_credits:
+            revision = StoryCreditRevision.clone(
+                credit, changeset, story_revision=story_revision, fork=True)
             revision.source = credit
             revision.created = credit.modified
             revision.save()
-        for story in object.active_stories():
-            story_revision = StoryRevision.clone(story, changeset, fork=True)
-            story_revision.source = story
-            story_revision.created = story.modified
-            story_revision.save()
-            for credit in story.active_credits:
-                revision = StoryCreditRevision.clone(
-                  credit, changeset, story_revision=story_revision, fork=True)
-                revision.source = credit
-                revision.created = credit.modified
-                revision.save()
-            for character in story.active_characters:
-                revision = StoryCharacterRevision.clone(
-                  character, changeset, story_revision=story_revision,
-                  fork=True)
-                revision.source = character
-                revision.created = character.modified
-                revision.save()
-            # uncomment after character/group update is deployed
-            # for group in story.active_groups:
-            #     revision = StoryGroupRevision.clone(
-            #       group, changeset, story_revision=story_revision, fork=True)
-            #     revision.source = group
-            #     revision.created = group.modified
-            #     revision.save()
-        for code_number in object.active_code_numbers():
-            revision = PublisherCodeNumberRevision.clone(
-              code_number, changeset, fork=True,
-              issue_revision=changeset.issuerevisions.get())
-            revision.source = code_number
-            revision.created = code_number.modified
+        for character in story.active_characters:
+            revision = StoryCharacterRevision.clone(
+                character, changeset, story_revision=story_revision,
+                fork=True)
+            revision.source = character
+            revision.created = character.modified
             revision.save()
+        for group in story.active_groups:
+            revision = StoryGroupRevision.clone(
+                group, changeset, story_revision=story_revision, fork=True)
+            revision.source = group
+            revision.created = group.modified
+            revision.save()
+    for code_number in issue.active_code_numbers():
+        revision = PublisherCodeNumberRevision.clone(
+            code_number, changeset, fork=True,
+            issue_revision=changeset.issuerevisions.get())
+        revision.source = code_number
+        revision.created = code_number.modified
+        revision.save()
+
+
+def setup_issues():
+    objects = Issue.objects.order_by('id')
+    print("Setting up: Issues")
+    for object in objects[:500]:
+        setup_issue(object)
 
 
 def main():
@@ -119,11 +122,14 @@ def main():
     setup_object_class('character_relation')
     setup_object_class('group_relation')
     setup_object_class('universe')
+    setup_object_class('story_arc')
+    setup_object_class('story_arc_relation')
 
     # by default only first 500,
-    # edit the routine if all or specific issues should be editable
+    # edit the routine if all issues should be editable
     setup_issues()
-
+    # to setup a specific issue, use the following:
+    # setup_issue(Issue.objects.get(id=XXX))
 
 if __name__ == '__main__':
     django.setup()
