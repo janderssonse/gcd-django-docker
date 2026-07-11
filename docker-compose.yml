@@ -1,3 +1,4 @@
+# Development environment for gcd-django.
 services:
   db:
     image: mysql:8.0.46
@@ -26,6 +27,7 @@ services:
     image: memcached:1.6.14-alpine
   web:
     build: .
+    init: true
     command: python gcd-django/manage.py runserver 0.0.0.0:8000
     volumes:
       # GCD_CODE lets the mounted checkout live elsewhere, for example a
