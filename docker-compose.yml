@@ -1,5 +1,5 @@
 version: "3.13"
-   
+
 services:
   db:
     image: mysql:8.0
@@ -22,6 +22,7 @@ services:
       - db:/var/lib/mysql
   web:
     build: .
+    init: true
     command: python gcd-django/manage.py runserver 0.0.0.0:8000
     volumes:
       - .:/gcd-django
