@@ -12,6 +12,5 @@ RUN apt-get update && apt-get install -y netcat-traditional && apt-get install -
 COPY gcd-django/requirements.txt .
 RUN pip install -r requirements.txt
 COPY gcd-django gcd-django
-COPY wait.sh .
 COPY setup_initial_changesets.py .
 COPY settings_local.py /code/gcd-django/

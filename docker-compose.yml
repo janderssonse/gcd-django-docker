@@ -3,6 +3,14 @@ version: "3.13"
 services:
   db:
     image: mysql:8.0
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-ugcd-django", "-pdb-gcd"]
+      interval: 5s
+      timeout: 3s
+      # allow ~3 minutes: the very first mysql init can be slow, and
+      # giving up here fails `up` where wait.sh used to loop
+      retries: 30
+      start_period: 30s
     ports:
       - '3308:3308'
     environment:
@@ -14,7 +22,7 @@ services:
       - db:/var/lib/mysql
   web:
     build: .
-    command: ./wait.sh
+    command: python gcd-django/manage.py runserver 0.0.0.0:8000
     volumes:
       # GCD_CODE lets the mounted checkout live elsewhere, for example a
       # sibling directory: GCD_CODE=../gcd-django docker compose up
@@ -29,7 +37,8 @@ services:
       - MYSQL_PASSWORD=db-gcd
       - MYSQL_ROOT_PASSWORD=root-password 
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 volumes:
   db:
     driver: local
