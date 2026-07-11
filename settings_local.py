@@ -15,11 +15,10 @@ DATABASES = {
 SILENCED_SYSTEM_CHECKS = ['django_recaptcha.recaptcha_test_key_error', 'models.E025',
                           'fields.W903']
 
-# Disable memcached for local development
 CACHES = {
     'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'unique-snowflake'
+        'BACKEND': 'apps.middleware.memcached_backend.MemcachedCache',
+        'LOCATION': 'memcached:11211',
     }
 }
 
@@ -32,3 +31,18 @@ ALLOWED_HOSTS = [
 
 def _modify(settings):
     settings['INSTALLED_APPS'] += ('django_extensions',)
+
+# Search needs Elasticsearch 7.x; start it with
+#   docker compose --profile search up -d es
+# and set USE_ELASTICSEARCH=1 in the web environment.
+if environ.get('USE_ELASTICSEARCH'):
+    USE_ELASTICSEARCH = True
+    HAYSTACK_CONNECTIONS = {
+        'default': {
+            'ENGINE':
+                'apps.gcd.elastic_backend_boosting.Elasticsearch7BoostingSearchEngine',
+            'URL': environ.get('ES_URL', 'http://es:9200/'),
+            'INDEX_NAME': 'haystack',
+            'INCLUDE_SPELLING': True,
+        },
+    }

@@ -22,6 +22,8 @@ services:
     volumes:
       - db:/var/lib/mysql
       - ./mysql-init.sql:/docker-entrypoint-initdb.d/mysql-init.sql:ro
+  memcached:
+    image: memcached:1.6.14-alpine
   web:
     build: .
     command: python gcd-django/manage.py runserver 0.0.0.0:8000
@@ -37,9 +39,22 @@ services:
       - MYSQL_DATABASE=my-gcd-db
       - MYSQL_USER=gcd-django
       - MYSQL_PASSWORD=db-gcd
+      - USE_ELASTICSEARCH=${USE_ELASTICSEARCH:-}
     depends_on:
       db:
         condition: service_healthy
+      memcached:
+        condition: service_started
+  es:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.26
+    profiles: ["search"]
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+    ports:
+      - "127.0.0.1:9200:9200"
+
 volumes:
   db:
     driver: local
