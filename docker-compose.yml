@@ -16,7 +16,11 @@ services:
     build: .
     command: ./wait.sh
     volumes:
-      - .:/gcd-django
+      # GCD_CODE lets the mounted checkout live elsewhere, for example a
+      # sibling directory: GCD_CODE=../gcd-django docker compose up
+      # Note the image build still reads ./gcd-django.
+      - ${GCD_CODE:-./gcd-django}:/code/gcd-django
+      - ./settings_local.py:/code/gcd-django/settings_local.py
     ports:
       - "8000:8000"
     environment:
