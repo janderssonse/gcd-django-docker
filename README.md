@@ -10,7 +10,7 @@ After cloning this repo into a directory, and editing the ports if needed, follo
 1. start services, or use -d in detached mode to see the logs - `docker compose up`
 1. run migrations - `docker compose run web /usr/local/bin/python gcd-django/manage.py migrate`
 
-On the first run the mysql-setup needs time, it needs to finish to have the db present before you can run migrate. The migrate also takes quite some minutes.
+On the first run the mysql setup needs time; compose waits for it via the db healthcheck before starting web. The migrate takes quite some minutes.
 
 This will result in a running website without any data.
 Check the names of your containers with `docker compose images`, one is for the db-server (use that as 'db_container_name') and one is for the website-server (use that as 'web_container_name').
