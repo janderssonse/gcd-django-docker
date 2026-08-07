@@ -1,45 +1,111 @@
 # gcd-django-docker
 
-This uses Docker and Docker Compose, which need to be installed first.
+This repository contains a local Docker Compose environment for
+[`gcd-django`](https://github.com/GrandComicsDatabase/gcd-django). The Django
+application is a separate repository and is cloned into `./gcd-django` during
+setup.
 
-After cloning this repo into a directory, and editing the ports if needed, follow these steps:
+Docker and Docker Compose are required. Run the commands below from the root of
+this repository.
 
-1. install GCD code - `git clone https://github.com/GrandComicsDatabase/gcd-django.git`
-1. optionally change the branch from beta to master, or use your development repo
-1. build images - `docker compose build`
-1. start services, or use -d in detached mode to see the logs - `docker compose up`
-1. run migrations - `docker compose run web /usr/local/bin/python gcd-django/manage.py migrate`
+## Setup
 
-On the first run the mysql setup needs time; compose waits for it via the db healthcheck before starting web. The migrate takes quite some minutes.
+Clone the application source into the directory expected by the Docker build:
 
-This will result in a running website without any data.
-Check the names of your containers with `docker compose images`, one is for the db-server (use that as 'db_container_name') and one is for the website-server (use that as 'web_container_name').
+```bash
+git clone https://github.com/GrandComicsDatabase/gcd-django.git gcd-django
+```
 
-To import data, login to the GCD and download a (current) dump from https://www.comics.org/download/.
+The clone uses the `beta` branch by default. To use `master` instead:
 
-After unzipping the dump, run the following with the name of the 'current_dump':  
-`docker exec -i 'db_container_name' mysql -u gcd-django my-gcd-db -pdb-gcd < 'current_dump'`
+```bash
+git -C gcd-django switch master
+```
 
-To view the website, access http://127.0.0.1:8000/.
+Build the web image, start the services, and create the database schema:
 
-To load users into the system, first run the migrations again:  
- `docker compose run web /usr/local/bin/python gcd-django/manage.py migrate`
-(note that we currently don't know why the migration needs to be done again) and then use  
-`docker compose run web python gcd-django/manage.py loaddata gcd-django/apps/indexer/fixtures/users.yaml`
-The three development users are (passwords in ()): `admin (admin)`, `editor (editme)`, and `dexter_1234 (test)`.
+```bash
+docker compose build
+docker compose up -d
+docker compose run --rm web python gcd-django/manage.py migrate
+```
 
-To get a shell use `docker exec -it 'web_container_name' bash`, e.g. to locally edit files. After changing into `gcd-django` you can get a django shell with `python manage.py shell`.
+The first MySQL startup can take a few minutes. Compose waits for its health
+check before starting the web service. The site is available at
+http://127.0.0.1:8000/.
 
-If doing development work on the code for editing, note that right now you cannot edit existing data, since we do not export the change history in the dump. But, you can add new data (with dexter_1234), approve it (with editor), and then edit the newly added data. 
+View the web logs with:
 
-We intend to add changesets for all the existing data to allow their editing in this development setup. As of now we support this for some object types. For that call:  
-`export DJANGO_SETTINGS_MODULE=settings`  
-`export PYTHONPATH=gcd-django`  
-`python setup_initial_changesets.py`  
+```bash
+docker compose logs -f web
+```
 
-Doing this for all objects will take some time, so we limit it in the code to the first 500 IDs per object class. You can comment out objects that for now do not need to be edited in your dev environment, or change the limit, by editing the python-file.
+## Editing the Application
 
-To allow approvals to work, the statistics need to exist, for that run the following:  
-`docker-compose run web python gcd-django/manage.py runscript reset_stats`
+The `gcd-django/` directory contains the application source. Edit files there
+with the editor and Git tools on the host.
 
-This setup so far does not support elasticsearch, i.e., the regular search. For that we likely need two more containers, one for elasticsearch, and (maybe) one for reddis.
+Compose mounts that directory at `/code/gcd-django` in the `web` container,
+where Django runs. The image includes `vim` for editing inside the container:
+
+```bash
+docker compose exec web bash
+cd gcd-django
+vim path/to/file
+```
+
+Both workflows edit the same checkout. Changes made in the container appear in
+`./gcd-django` on the host and remain after the container is removed. The
+development server detects changes from either workflow and reloads
+automatically. Rebuild the image only when `gcd-django/requirements.txt`
+changes.
+
+## Importing Data
+
+Download and extract a current database dump from
+https://www.comics.org/download/, then import it with:
+
+```bash
+docker compose exec -T db mysql -u gcd-django -pdb-gcd my-gcd-db < current_dump
+```
+
+Run migrations after the import and load the development users:
+
+```bash
+docker compose run --rm web python gcd-django/manage.py migrate
+docker compose run --rm web python gcd-django/manage.py loaddata gcd-django/apps/indexer/fixtures/users.yaml
+```
+
+The users are `admin` (`admin`), `editor` (`editme`), and `dexter_1234`
+(`test`).
+
+Downloaded dumps do not include the change history needed to edit existing
+records. Newly added records can be edited normally. To create development
+changesets for the supported record types, run:
+
+```bash
+docker compose exec web env DJANGO_SETTINGS_MODULE=settings PYTHONPATH=gcd-django python setup_initial_changesets.py
+```
+
+The script processes the first 500 records of each supported type. Rebuild
+statistics before testing approvals:
+
+```bash
+docker compose run --rm web python gcd-django/manage.py runscript reset_stats
+```
+
+## Useful Commands
+
+Open a Django shell:
+
+```bash
+docker compose exec web python gcd-django/manage.py shell
+```
+
+Stop the services without deleting the database volume:
+
+```bash
+docker compose down
+```
+
+Elasticsearch is not included, so full-text search is unavailable.

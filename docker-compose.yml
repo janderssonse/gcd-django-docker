@@ -23,7 +23,14 @@ services:
     init: true
     command: python gcd-django/manage.py runserver 0.0.0.0:8000
     volumes:
-      - .:/gcd-django
+      # Mount the checkout where the app runs so host edits trigger reloads.
+      - ./gcd-django:/code/gcd-django
+      # Some Windows checkouts materialize Git symlinks as plain text.
+      - ./gcd-django/static/js/htmx_2_0_8.min.js:/code/gcd-django/static/js/htmx.min.js:ro
+      # gcd-django gitignores settings_local.py, each installation brings
+      # its own. This repo's checked-in copy holds the container settings,
+      # so mount it into the checkout.
+      - ./settings_local.py:/code/gcd-django/settings_local.py
     ports:
       - "8000:8000"
     environment:
